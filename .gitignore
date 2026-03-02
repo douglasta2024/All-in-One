@@ -1,0 +1,40 @@
+# ── Secrets & environment ─────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Python ────────────────────────────────────────────────────────
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── Temporary audio files (yt-dlp downloads) ──────────────────────
+backend/tmp/
+*.mp3
+*.mp4
+*.m4a
+*.webm
+*.wav
+*.opus
+
+# ── Node / Frontend ───────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ── OS ────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ───────────────────────────────────────────────────────────
+.idea/
+*.suo
+*.user
