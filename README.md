@@ -13,6 +13,12 @@ A modular knowledge capture hub that automates converting multimedia content int
 
 ---
 
+## Demo
+
+![Demo Video](assets/Youtube-to-Notionv2.gif)
+
+---
+
 ## Architecture
 
 ```mermaid
