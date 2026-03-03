@@ -6,3 +6,4 @@ openai-whisper
 notion-client==2.2.1
 python-dotenv==1.0.0
 httpx==0.26.0
+notebook-mcp-cli==0.3.19

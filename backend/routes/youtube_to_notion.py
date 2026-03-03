@@ -6,9 +6,8 @@ from pydantic import BaseModel
 from typing import Optional
 
 from services.categorizer import detect_category
-from services.youtube import fetch_metadata, download_audio
-from services.transcriber import transcribe_audio
-from services.summarizer import summarize
+from services.youtube import fetch_metadata
+from services.notebooklm import add_and_query
 from services.notion import write_to_notion
 
 router = APIRouter()
@@ -41,17 +40,9 @@ async def event_stream(url: str, category: Optional[str]):
         else:
             yield emit("progress", message=f"Category confirmed: {category}")
 
-        # Step 3: Download audio
-        yield emit("progress", message="Downloading audio...")
-        audio_path = await asyncio.to_thread(download_audio, url)
-
-        # Step 4: Transcribe
-        yield emit("progress", message="Transcribing audio (this may take a while)...")
-        transcript = await asyncio.to_thread(transcribe_audio, audio_path)
-
-        # Step 5: Summarize
-        yield emit("progress", message="Summarizing notes with Ollama...")
-        summaries = await asyncio.to_thread(summarize, transcript, category, metadata)
+        # Step 3: Add to NotebookLM and generate notes
+        yield emit("progress", message="Adding to NotebookLM and generating notes (this may take a minute)...")
+        summaries = await asyncio.to_thread(add_and_query, url, category, metadata)
 
         # Step 6: Write to Notion
         yield emit("progress", message="Writing to Notion...")

@@ -30,8 +30,8 @@ STOCKS_KEYWORDS = {
 def detect_category(metadata: dict) -> str:
     """
     Detect category from video title, channel, and description.
-    Returns one of: 'Educational/Tutorial', 'Tech/Programming', 'Stocks'
-    Defaults to 'Educational/Tutorial' when ambiguous.
+    Returns one of: 'General', 'Technology', 'Stocks'
+    Defaults to 'General' when ambiguous.
     """
     haystack = " ".join([
         metadata.get("title", ""),
@@ -40,18 +40,18 @@ def detect_category(metadata: dict) -> str:
     ]).lower()
 
     scores = {
-        "Educational/Tutorial": 0,
-        "Tech/Programming": 0,
+        "General": 0,
+        "Technology": 0,
         "Stocks": 0,
     }
 
     for kw in EDUCATIONAL_KEYWORDS:
         if kw in haystack:
-            scores["Educational/Tutorial"] += 1
+            scores["General"] += 1
 
     for kw in TECH_KEYWORDS:
         if kw in haystack:
-            scores["Tech/Programming"] += 1
+            scores["Technology"] += 1
 
     for kw in STOCKS_KEYWORDS:
         if kw in haystack:
