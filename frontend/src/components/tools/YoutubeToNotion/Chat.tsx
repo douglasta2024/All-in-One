@@ -270,7 +270,7 @@ function EmptyState() {
         </div>
         <p className="text-sm font-medium text-ink-2">Paste a YouTube URL to begin</p>
         <p className="text-xs text-ink-3 mt-1.5 leading-relaxed">
-          Audio is transcribed locally — nothing sent to the cloud
+          Notes are generated via NotebookLM and saved to Notion
         </p>
       </div>
     </div>

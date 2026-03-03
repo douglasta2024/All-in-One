@@ -6,59 +6,59 @@ A modular knowledge capture hub that automates converting multimedia content int
 
 ## Features
 
-- **YouTube → Notion:** Paste a YouTube URL → get a fully structured Notion page with transcription, summary, and category-specific content templates
-- **Fully local pipeline:** Audio transcribed on-device with Whisper, notes summarized with a local Ollama model — nothing sent to the cloud
+- **YouTube → Notion:** Paste a YouTube URL → get a fully structured Notion page with AI-generated notes
+- **NotebookLM-powered:** Google NotebookLM processes the video and generates notes — no local GPU or transcription required
 - **Streaming UI:** Real-time progress updates via Server-Sent Events as each pipeline stage completes
-- **Category-aware summaries:** Ollama fills in structured sections (Key Concepts, Takeaways, etc.) based on the detected video category
+- **Category-aware routing:** Videos are auto-detected as General, Technology, or Stocks and routed to the matching NotebookLM notebook
 
 ---
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────┐
-│           Frontend  (React + Vite)              │
-│                                                 │
-│  App.tsx → Sidebar.tsx  (tool navigation)       │
-│          → Chat.tsx     (streaming UI)          │
-│          → Message.tsx  (5 message types)       │
-└──────────────────┬──────────────────────────────┘
-                   │  HTTP POST + SSE (via Vite proxy)
-                   │  localhost:5173 → localhost:8000
-┌──────────────────▼──────────────────────────────┐
-│           Backend  (FastAPI + Uvicorn)          │
-│                                                 │
-│  main.py                                        │
-│  routes/youtube_to_notion.py  ← POST endpoint  │
-│                                                 │
-│  services/                                      │
-│    youtube.py      ← yt-dlp metadata + audio   │
-│    transcriber.py  ← Whisper local transcription│
-│    categorizer.py  ← keyword-based detection   │
-│    summarizer.py   ← Ollama structured notes   │
-│    notion.py       ← Notion API page creation  │
-└─────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    User(["👤 User"])
+
+    subgraph FE["Frontend · React + Vite"]
+        Chat["Chat.tsx"]
+    end
+
+    subgraph BE["Backend · FastAPI"]
+        S1["① Fetch metadata"] --> S2["② Detect category"] --> S3["③ Generate notes"] --> S4["④ Write to Notion"]
+    end
+
+    YouTube[("YouTube")]
+    NLM[("Google NotebookLM")]
+    NotionDB[("Notion")]
+
+    User --> Chat
+    Chat <-->|"POST + SSE"| BE
+    S1 -.-> YouTube
+    S3 -.-> NLM
+    S4 -.-> NotionDB
 ```
 
 ### Pipeline Flow
 
-1. User submits YouTube URL from the chat input
+1. User pastes a YouTube URL in the chat input
 2. Backend fetches video metadata via `yt-dlp` → streams `progress` event
 3. Category is auto-detected from title/channel/description keywords → streams `category_detected` event
-4. User confirms or changes category in the UI
+4. User confirms or overrides the category in the UI
 5. Frontend re-submits with confirmed category
-6. Backend downloads audio and transcribes locally with **Whisper** (base model)
-7. Transcript is sent to **Ollama** which generates structured notes for each section
-8. Notion page is created with the AI-generated content → streams `done` event with page URL
+6. Video URL is added as a source to the matching **NotebookLM** notebook (`nlm source add --youtube --wait`)
+7. NotebookLM is queried for comprehensive notes on the video (`nlm query notebook`)
+8. Notion page is created with the AI-generated notes → streams `done` event with page URL
 9. Frontend displays a success card with a direct link to the Notion page
 
-### Category Templates
+### Categories & Notebooks
 
-| Category | Notion Sections |
-|---|---|
-| **Educational / Tutorial** | Summary, Key Concepts, Definitions, Takeaways |
-| **Tech / Programming** | Summary, Tools & Stack, Implementation Notes, Code Snippets, Gotchas, Takeaways |
-| **Stocks / Finance** | Ticker Analysis, Bull Arguments, Bear Arguments, Key Quotes, Validity Check |
+Each video is routed to one of three persistent NotebookLM notebooks based on auto-detected category:
+
+| Category | NotebookLM Notebook | Auto-detected from |
+|---|---|---|
+| **General** | General | tutorial, guide, learn, walkthrough, etc. |
+| **Technology** | Technology | python, react, docker, API, machine learning, etc. |
+| **Stocks** | Stocks | ticker, earnings, investing, bull/bear, ETF, etc. |
 
 ---
 
@@ -68,10 +68,9 @@ A modular knowledge capture hub that automates converting multimedia content int
 |---|---|
 | Frontend | React 18, TypeScript, Vite 7, Tailwind CSS 3 |
 | Backend | Python, FastAPI, Uvicorn, sse-starlette |
-| YouTube | yt-dlp, FFmpeg |
-| Transcription | openai-whisper (local) |
-| Summarization | Ollama (local LLM, configurable model) |
-| Notion | notion-client 2.2.1 |
+| YouTube | yt-dlp |
+| Notes | Google NotebookLM via notebooklm-mcp-cli (`nlm`) |
+| Notion | notion-client |
 
 ---
 
@@ -79,8 +78,8 @@ A modular knowledge capture hub that automates converting multimedia content int
 
 - **Node.js** (v18+)
 - **Python** (3.10+)
-- **FFmpeg** — required by yt-dlp for audio extraction ([install guide](https://ffmpeg.org/download.html))
-- **Ollama** — local LLM runner ([install guide](https://ollama.com/download)) with at least one model pulled (e.g. `ollama pull llama3.2`)
+- **notebooklm-mcp-cli** — install via uv: `uv tool install notebooklm-mcp-cli`, then authenticate with `nlm login`
+- A **Google account** with access to [NotebookLM](https://notebooklm.google.com)
 - A **Notion integration token** and a target **database ID**
 
 ---
@@ -123,13 +122,20 @@ Edit `backend/.env`:
 ```env
 NOTION_API_KEY=secret_...
 NOTION_DATABASE_ID=...
-OLLAMA_MODEL=llama3.2
 ```
 
 To get these values:
 1. Go to [https://www.notion.so/my-integrations](https://www.notion.so/my-integrations) and create an integration
 2. Copy the **Internal Integration Token** as `NOTION_API_KEY`
 3. Create a Notion database, share it with your integration, and copy the database ID from the URL as `NOTION_DATABASE_ID`
+
+**NotebookLM authentication** (one-time):
+
+```bash
+nlm login
+```
+
+This opens a browser to authenticate with your Google account. The three category notebooks (General, Technology, Stocks) are created automatically on first backend startup.
 
 ### 3. Set up the Notion database
 
@@ -138,50 +144,21 @@ Create a database in Notion with the following properties exactly as named:
 | Property | Type | Notes |
 |---|---|---|
 | **Title** | Title | Page title (video title) |
-| **Category** | Select | Options: `Educational/Tutorial`, `Tech/Programming`, `Stocks` |
+| **Category** | Select | Options: `General`, `Technology`, `Stocks` |
 | **Channel** | Rich text | YouTube channel name |
 | **URL** | URL | Link to the original YouTube video |
 | **Date Watched** | Date | Auto-set to today's date |
 
-Each page created in the database also contains a structured body based on the video category:
-
-**Educational / Tutorial pages include:**
-- Metadata block (title, channel, URL, date)
-- Summary
-- Key Concepts
-- Definitions & Terminology
-- Takeaways
-- Transcript excerpt (first 2000 characters)
-
-**Tech / Programming pages include:**
-- Metadata block
-- Summary
-- Tools & Libraries
-- Key Points & Implementation Notes
-- Code Snippets & Commands
-- Gotchas & Tips
-- Takeaways
-- Transcript excerpt
-
-**Stocks / Finance pages include:**
-- Metadata block
-- Overview
-- Tickers & Companies Mentioned
-- Bull Arguments
-- Bear Arguments
-- Validity Assessment Prompts
-- Key Quotes
-- Open Questions
-- Transcript excerpt
+Each page body contains a **Metadata** block (title, channel, URL, date) followed by a **Notes** section with the AI-generated content from NotebookLM, rendered with proper headings, bullet points, and bold text.
 
 Once the database is created, share it with your integration:
 1. Open the database in Notion
 2. Click `...` (top-right) → **Connections**
 3. Search for your integration name and click **Confirm**
 
-To verify everything is wired up correctly, run the test script:
+To verify the Notion connection is wired up correctly, run the test script:
 
-```bat
+```bash
 cd backend
 .venv\Scripts\activate
 python test_notion.py
@@ -220,15 +197,16 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 ```
 All-in-one/
 ├── backend/
-│   ├── main.py                   # FastAPI app entrypoint
+│   ├── main.py                   # FastAPI app + NotebookLM startup
 │   ├── requirements.txt
 │   ├── .env.example              # Environment variable template
+│   ├── .notebooks.json           # Auto-generated: cached NotebookLM notebook IDs
 │   ├── routes/
 │   │   └── youtube_to_notion.py  # POST /api/youtube-to-notion (SSE stream)
 │   └── services/
-│       ├── youtube.py            # yt-dlp metadata & audio download
-│       ├── transcriber.py        # Whisper transcription
+│       ├── youtube.py            # yt-dlp metadata fetch
 │       ├── categorizer.py        # Keyword-based category detection
+│       ├── notebooklm.py         # nlm CLI wrapper — add source + query
 │       └── notion.py             # Notion API page creation
 ├── frontend/
 │   ├── index.html
@@ -266,9 +244,9 @@ Streams Server-Sent Events as the pipeline runs.
 
 | Event | Payload | Description |
 |---|---|---|
-| `progress` | `{ "step": "...", "status": "done" }` | A pipeline stage completed |
-| `category_detected` | `{ "category": "..." }` | Auto-detected category (pauses for user confirmation) |
-| `done` | `{ "url": "https://notion.so/..." }` | Notion page created successfully |
+| `progress` | `{ "message": "..." }` | A pipeline stage is running |
+| `category_detected` | `{ "category": "...", "title": "...", "channel": "..." }` | Auto-detected category (pauses for user confirmation) |
+| `done` | `{ "notionUrl": "https://notion.so/..." }` | Notion page created successfully |
 | `error` | `{ "message": "..." }` | Pipeline failure |
 
 ---

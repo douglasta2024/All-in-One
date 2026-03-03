@@ -15,15 +15,6 @@ build/
 .mypy_cache/
 .ruff_cache/
 
-# ── Temporary audio files (yt-dlp downloads) ──────────────────────
-backend/tmp/
-*.mp3
-*.mp4
-*.m4a
-*.webm
-*.wav
-*.opus
-
 # ── Node / Frontend ───────────────────────────────────────────────
 node_modules/
 frontend/dist/

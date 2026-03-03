@@ -57,7 +57,7 @@ function ProgressMessage({ msg }: { msg: Extract<Msg, { kind: 'progress' }> }) {
   )
 }
 
-const CATEGORIES = ['Educational/Tutorial', 'Tech/Programming', 'Stocks']
+const CATEGORIES = ['General', 'Technology', 'Stocks']
 
 function CategoryMessage({
   msg,
