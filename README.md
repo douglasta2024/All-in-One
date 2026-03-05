@@ -1,4 +1,4 @@
-# All-in-One
+# Youtube to Notion Notes Generator
 
 A modular knowledge capture hub that automates converting multimedia content into structured Notion pages. Currently features a **YouTube → Notion** pipeline with streaming real-time feedback.
 
